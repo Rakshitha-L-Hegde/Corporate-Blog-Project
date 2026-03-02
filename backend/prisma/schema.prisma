@@ -5,18 +5,40 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
-  
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   password  String
   role      Role     @default(WRITER)
+
+  posts     Post[]   // 👈 relation added
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String      @id @default(uuid())
+  title     String
+  slug      String      @unique
+  content   Json        // 👈 This stores editor blocks
+  status    PostStatus  @default(DRAFT)
+
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
 enum Role {
   ADMIN
   EDITOR
   WRITER
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
 }
