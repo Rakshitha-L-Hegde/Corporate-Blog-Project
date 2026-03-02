@@ -3,11 +3,10 @@ import { z } from "zod";
 
 // 🔥 Load .env FIRST
 dotenv.config();
-
+console.log("ALL ENV:", process.env);
 const envSchema = z.object({
-  PORT: z.string(),
   NODE_ENV: z.enum(["development", "production", "test"]),
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -19,4 +18,3 @@ if (!parsedEnv.success) {
 }
 
 export const env = parsedEnv.data;
-console.log("ENV KEYS:", Object.keys(process.env));
