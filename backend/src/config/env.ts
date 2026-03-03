@@ -7,7 +7,11 @@ console.log("ALL ENV:", process.env);
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]),
   DATABASE_URL: z.string(),
-  PORT: z.coerce.number().default(5000), // 👈 ADD THIS
+  PORT: z.coerce.number().default(5000),
+
+  // 🔐 ADD THESE TWO
+  JWT_SECRET: z.string(),
+  JWT_EXPIRES_IN: z.string(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

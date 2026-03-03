@@ -7,6 +7,8 @@ import { validate } from "./middleware/validate";
 import { errorHandler } from "./middleware/errorHandler";
 import { prisma } from "./lib/prisma";
 import postRoutes from "./routes/post.routes";
+import bcrypt from "bcrypt";
+import authRoutes from "./routes/auth.routes";
 
 console.log("App imported postRoutes");
 const app = express();
@@ -32,17 +34,28 @@ app.post("/test", validate(registerSchema), (req, res) => {
 
 app.use("/posts", postRoutes);
 
-app.get("/create-user", async (req, res) => {
-  const user = await prisma.user.create({
-    data: {
-      name: "Admin User",
-      email: "admin@test.com",
-      password: "123456",
-      role: "ADMIN"
-    }
-  });
+app.use("/api/auth", authRoutes);
 
-  res.json(user);
+app.get("/create-user", async (req, res) => {
+  try {
+    // 1️⃣ Hash the password
+    const hashedPassword = await bcrypt.hash("123456", 10);
+
+    // 2️⃣ Create user with hashed password
+    const user = await prisma.user.create({
+      data: {
+        name: "Admin User",
+        email: "admin@test.com",
+        password: hashedPassword,
+        role: "ADMIN",
+      },
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error creating user" });
+  }
 });
 
 app.use(errorHandler);
