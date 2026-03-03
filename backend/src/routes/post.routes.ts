@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { validate } from "../middleware/validate";
 import { editorSchema } from "../schemas/editor.schema";
+import slugify from "slugify";
 
 console.log("Post routes loaded");
 const router = Router();
@@ -28,7 +29,6 @@ router.post(
     try {
       const {
         title,
-        slug,
         excerpt,
         content,
         seoTitle,
@@ -36,7 +36,13 @@ router.post(
         coverImageId,
         categories,
         status
-      } = req.body;
+        } = req.body;
+
+        // 🔥 Generate slug automatically
+        let slug = slugify(title, {
+        lower: true,
+        strict: true
+        });
 
       // 1️⃣ Check slug uniqueness
       const existing = await prisma.post.findUnique({

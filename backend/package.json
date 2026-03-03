@@ -5,6 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "generate": "prisma generate",
     "postinstall": "prisma generate"
   },
   "keywords": [],
@@ -18,6 +21,7 @@
     "dotenv": "^17.3.1",
     "express": "^4.22.1",
     "prisma": "^6.19.2",
+    "slugify": "^1.6.6",
     "zod": "^4.3.6"
   },
   "devDependencies": {
