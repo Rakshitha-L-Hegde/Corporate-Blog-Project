@@ -1,70 +1,44 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+type Role = "ADMIN" | "EDITOR" | "WRITER";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  metadataBase: new URL("https://corporate-blog-project.vercel.app/"),
-
-  title: {
-    default: "The Corporate Blog",
-    template: "%s | The Corporate Blog",
-  },
-
-  description:
-    "A production-grade corporate blogging platform focused on SEO, performance, and authority building.",
-
-  keywords: [
-    "corporate blog",
-    "business blogging",
-    "SEO blog platform",
-    "Next.js blog",
-    "content marketing",
-  ],
-
-  openGraph: {
-    title: "The Corporate Blog",
-    description:
-      "A production-grade blogging platform built for performance and SEO.",
-    url: "https://corporate-blog-project.vercel.app/",
-    siteName: "The Corporate Blog",
-    type: "website",
-  },
-
-  twitter: {
-    card: "summary_large_image",
-    title: "The Corporate Blog",
-    description:
-      "Production-grade blogging platform built with Next.js and TypeScript.",
-  },
-
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
-
-export default function RootLayout({
+function getUserRole(): Role {
+  return "EDITOR";
+}
+export default function DashboardLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+
+  const userRole = getUserRole();
+
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <div className="min-h-screen flex">
+      
+      {/* Sidebar */}
+      <aside className="w-64 bg-gray-900 text-white p-6">
+        <h2 className="text-xl font-bold mb-6">CMS</h2>
+
+        <nav className="space-y-3">
+            <a href="/dashboard">Dashboard</a>
+
+            <a href="/dashboard/posts">Posts</a>
+
+            {/* WRITER should not see Categories */}
+            {userRole !== "WRITER" && (
+              <a href="/dashboard/categories">Categories</a>
+            )}
+
+            {/* Only ADMIN can see Settings */}
+            {userRole === "ADMIN" && (
+              <a href="/dashboard/settings">Settings</a>
+            )}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 bg-gray-100 p-8">
         {children}
-      </body>
-    </html>
+      </main>
+    </div>
   );
 }
