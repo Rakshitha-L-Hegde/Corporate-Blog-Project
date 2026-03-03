@@ -7,6 +7,7 @@ console.log("ALL ENV:", process.env);
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]),
   DATABASE_URL: z.string(),
+  PORT: z.coerce.number().default(5000), // 👈 ADD THIS
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

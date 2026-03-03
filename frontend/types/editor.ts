@@ -1,38 +1,43 @@
-export type HeadingBlock = {
-  type: "heading";
-  level: 1 | 2 | 3 | 4;
-  content: string;
-};
-
 export type ParagraphBlock = {
+  id: string;
   type: "paragraph";
   content: string;
 };
 
+export type HeadingBlock = {
+  id: string;
+  type: "heading";
+  level: 1 | 2 | 3;
+  content: string;
+};
+
 export type ImageBlock = {
+  id: string;
   type: "image";
   url: string;
-  alt: string;
   caption?: string;
 };
 
 export type QuoteBlock = {
+  id: string;
   type: "quote";
   content: string;
-  author?: string;
 };
 
 export type CodeBlock = {
+  id: string;
   type: "code";
   language: string;
   content: string;
 };
 
 export type EditorBlock =
-  | HeadingBlock
   | ParagraphBlock
+  | HeadingBlock
   | ImageBlock
   | QuoteBlock
   | CodeBlock;
 
-export type EditorContent = EditorBlock[];
+export type EditorContent = {
+  blocks: EditorBlock[];
+};

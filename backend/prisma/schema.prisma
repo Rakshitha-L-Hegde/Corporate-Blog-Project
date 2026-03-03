@@ -4,32 +4,88 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id        String   @id @default(uuid())
+  name      String
   email     String   @unique
   password  String
-  role      Role     @default(WRITER)
-
-  posts     Post[]   // 👈 relation added
-
+  role      Role @default(WRITER)
+  avatarUrl String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  posts     Post[]
+  images    Image[]
+
+  @@index([role])
 }
 
 model Post {
-  id        String      @id @default(uuid())
-  title     String
-  slug      String      @unique
-  content   Json        // 👈 This stores editor blocks
-  status    PostStatus  @default(DRAFT)
+  id            String     @id @default(uuid())
+  title         String
+  slug          String     @unique
+  excerpt       String?
+  content       Json
+  status        PostStatus @default(DRAFT)
+  readingTime   Int?
+  seoTitle      String?
+  seoDescription String?
+  publishedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
-  authorId  String
-  author    User        @relation(fields: [authorId], references: [id])
+  authorId      String
+  author        User       @relation(fields: [authorId], references: [id])
 
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  coverImageId  String?
+  coverImage    Image?     @relation(fields: [coverImageId], references: [id])
+
+  categories    PostCategory[]
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([authorId])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  posts       PostCategory[]
+
+  @@index([slug])
+}
+
+model PostCategory {
+  postId     String
+  categoryId String
+
+  post       Post     @relation(fields: [postId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([postId, categoryId])
+}
+
+model Image {
+  id         String   @id @default(uuid())
+  publicId   String
+  url        String
+  width      Int?
+  height     Int?
+  format     String?
+  size       Int?
+  createdAt  DateTime @default(now())
+
+  uploadedById String
+user         User @relation(fields: [uploadedById], references: [id])
+
+  posts      Post[]
 }
 
 enum Role {
