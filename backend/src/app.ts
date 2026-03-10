@@ -32,7 +32,7 @@ app.post("/test", validate(registerSchema), (req, res) => {
   });
 });
 
-app.use("/posts", postRoutes);
+app.use("/api/posts", postRoutes);
 
 app.use("/api/auth", authRoutes);
 

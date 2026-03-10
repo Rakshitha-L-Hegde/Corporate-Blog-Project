@@ -23,6 +23,9 @@ export const login = async (req: Request, res: Response) => {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
+  console.log("LOGIN JWT SECRET:", env.JWT_SECRET);
+
+  
   // 3️⃣ Generate ACCESS token
   const accessToken = jwt.sign(
     {

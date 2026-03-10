@@ -3,8 +3,10 @@ import { prisma } from "../lib/prisma";
 import { validate } from "../middleware/validate";
 import { editorSchema } from "../schemas/editor.schema";
 import slugify from "slugify";
+import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 
 console.log("Post routes loaded");
+
 const router = Router();
 
 router.get("/", async (req, res, next) => {
@@ -22,11 +24,16 @@ router.get("/", async (req, res, next) => {
   }
 });
 
+
 router.post(
   "/",
-  //validate(editorSchema),
-  async (req, res, next) => {
+  authenticate,                 // 🔐 must be logged in
+  authorize("ADMIN", "EDITOR"), // 🔐 role check
+  validate(editorSchema),
+
+  async (req: AuthRequest, res, next) => {
     try {
+
       const {
         title,
         excerpt,
@@ -36,13 +43,13 @@ router.post(
         coverImageId,
         categories,
         status
-        } = req.body;
+      } = req.body;
 
-        // 🔥 Generate slug automatically
-        let slug = slugify(title, {
+      // 🔥 Generate slug
+      let slug = slugify(title, {
         lower: true,
         strict: true
-        });
+      });
 
       // 1️⃣ Check slug uniqueness
       const existing = await prisma.post.findUnique({
@@ -65,17 +72,23 @@ router.post(
           seoTitle,
           seoDescription,
           status,
-          authorId: "e8891281-510b-4b38-ab5e-d3eb888c1c87", // we replace later with auth
+
+          // 🔥 Use logged-in user
+          authorId: req.user!.userId,
+
           coverImageId,
+
           categories: {
-            create: categories?.map((categoryId: string) => ({
-              categoryId
-            })) || []
+            create:
+              categories?.map((categoryId: string) => ({
+                categoryId
+              })) || []
           }
         }
       });
 
       res.status(201).json(post);
+
     } catch (err) {
       next(err);
     }
