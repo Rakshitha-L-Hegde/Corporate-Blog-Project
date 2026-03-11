@@ -3,6 +3,9 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { env } from "../config/env";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -25,7 +28,7 @@ export const login = async (req: Request, res: Response) => {
 
   console.log("LOGIN JWT SECRET:", env.JWT_SECRET);
 
-  
+
   // 3️⃣ Generate ACCESS token
   const accessToken = jwt.sign(
     {
@@ -103,5 +106,75 @@ export const refresh = async (req: Request, res: Response) => {
 
   } catch {
     return res.status(403).json({ message: "Invalid refresh token" });
+  }
+};
+
+export const googleLogin = async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload?.email) {
+      return res.status(400).json({ message: "Google login failed" });
+    }
+
+    const email = payload.email;
+    const name = payload.name || "Google User";
+
+    // Check if user exists
+    let user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    // Create user if not exists
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          name,
+          email,
+          password: "", // Google users don't need password
+          role: "WRITER"
+        }
+      });
+    }
+
+    // Generate access token
+    const accessToken = jwt.sign(
+      { userId: user.id, role: user.role },
+      env.JWT_SECRET as string,
+      {
+        expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+      }
+    );
+
+    // Generate refresh token
+    const refreshToken = jwt.sign(
+      { userId: user.id },
+      env.JWT_REFRESH_SECRET as string,
+      {
+        expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+      }
+    );
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken }
+    });
+
+    res.json({
+      accessToken,
+      refreshToken,
+      user
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(401).json({ message: "Google authentication failed" });
   }
 };
