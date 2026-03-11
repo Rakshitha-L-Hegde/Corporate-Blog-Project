@@ -59,9 +59,21 @@ export const login = async (req: Request, res: Response) => {
   });
 
   // 6️⃣ Send response
+    res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/"
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/"
+  });
+
   return res.json({
-    accessToken,
-    refreshToken,
     user: {
       id: user.id,
       name: user.name,

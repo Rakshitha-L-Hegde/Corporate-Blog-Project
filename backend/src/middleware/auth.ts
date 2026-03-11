@@ -15,15 +15,14 @@ export const authenticate = (
   next: NextFunction
 ) => {
 
-  const header = req.headers.authorization;
+  const token = req.cookies.accessToken;
 
-  if (!header) {
+  if (!token) {
     return res.status(401).json({ message: "No token provided" });
   }
 
-  const token = header.split(" ")[1];
-
   try {
+
     const decoded = jwt.verify(token, env.JWT_SECRET) as {
       userId: string;
       role: string;
@@ -37,7 +36,6 @@ export const authenticate = (
     return res.status(401).json({ message: "Invalid token" });
   }
 };
-
 export const authorize = (...roles: string[]) => {
 
   return (req: AuthRequest, res: Response, next: NextFunction) => {

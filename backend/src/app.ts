@@ -9,12 +9,17 @@ import { prisma } from "./lib/prisma";
 import postRoutes from "./routes/post.routes";
 import bcrypt from "bcrypt";
 import authRoutes from "./routes/auth.routes";
+import cookieParser from "cookie-parser";
 
 console.log("App imported postRoutes");
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.send("Backend running 🚀");
