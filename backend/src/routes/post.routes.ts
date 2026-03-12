@@ -9,9 +9,16 @@ console.log("Post routes loaded");
 
 const router = Router();
 
+/*
+PUBLIC POSTS
+Only return published posts for the public website
+*/
 router.get("/", async (req, res, next) => {
   try {
     const posts = await prisma.post.findMany({
+      where: {
+        status: "PUBLISHED"
+      },
       include: {
         author: true,
         categories: true
@@ -24,16 +31,20 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-
+/*
+CREATE POST
+Admin + Editor can create posts
+Editor -> always draft
+Admin -> can publish
+*/
 router.post(
   "/",
-  authenticate,                 // 🔐 must be logged in
-  authorize("ADMIN", "EDITOR"), // 🔐 role check
+  authenticate,
+  authorize("ADMIN", "EDITOR"),
   validate(editorSchema),
 
   async (req: AuthRequest, res, next) => {
     try {
-
       const {
         title,
         excerpt,
@@ -41,17 +52,16 @@ router.post(
         seoTitle,
         seoDescription,
         coverImageId,
-        categories,
-        status
+        categories
       } = req.body;
 
-      // 🔥 Generate slug
-      let slug = slugify(title, {
+      // Generate slug
+      const slug = slugify(title, {
         lower: true,
         strict: true
       });
 
-      // 1️⃣ Check slug uniqueness
+      // Check slug uniqueness
       const existing = await prisma.post.findUnique({
         where: { slug }
       });
@@ -62,7 +72,17 @@ router.post(
         });
       }
 
-      // 2️⃣ Create post
+      /*
+      Role-based publish control
+      Editor -> Draft only
+      Admin -> Can publish
+      */
+      let status: "DRAFT" | "PUBLISHED" = "DRAFT";
+
+      if (req.user!.role === "ADMIN") {
+        status = req.body.status || "DRAFT";
+      }
+
       const post = await prisma.post.create({
         data: {
           title,
@@ -72,10 +92,7 @@ router.post(
           seoTitle,
           seoDescription,
           status,
-
-          // 🔥 Use logged-in user
           authorId: req.user!.userId,
-
           coverImageId,
 
           categories: {
@@ -88,6 +105,36 @@ router.post(
       });
 
       res.status(201).json(post);
+
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/*
+PUBLISH POST
+Only ADMIN can publish
+*/
+router.patch(
+  "/:id/publish",
+  authenticate,
+  authorize("ADMIN"),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+
+      const post = await prisma.post.update({
+        where: { id },
+        data: {
+          status: "PUBLISHED"
+        }
+      });
+
+      res.json({
+        message: "Post published successfully",
+        post
+      });
 
     } catch (err) {
       next(err);
