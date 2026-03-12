@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-
+import helmet from "helmet";
 import { env } from "./config/env";
 import { registerSchema } from "./schemas/auth.schema";
 import { validate } from "./middleware/validate";
@@ -10,14 +10,27 @@ import postRoutes from "./routes/post.routes";
 import bcrypt from "bcrypt";
 import authRoutes from "./routes/auth.routes";
 import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
 
 console.log("App imported postRoutes");
 const app = express();
 
+app.use(helmet());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again later."
+});
+
+app.use(limiter);
+
 app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
+  origin: ["http://localhost:3000"],
+  credentials: true,
+  methods: ["GET", "POST", "PATCH", "DELETE"],
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 
