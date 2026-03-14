@@ -113,6 +113,48 @@ router.post(
 );
 
 /*
+UPDATE POST
+Admin + Editor can update posts
+*/
+router.put(
+  "/:id",
+  authenticate,
+  authorize("ADMIN", "EDITOR"),
+  async (req: AuthRequest, res, next) => {
+    try {
+
+      const { id } = req.params;
+
+      const {
+        title,
+        excerpt,
+        content,
+        seoTitle,
+        seoDescription,
+        coverImageId
+      } = req.body;
+
+      const updatedPost = await prisma.post.update({
+        where: { id },
+        data: {
+          title,
+          excerpt,
+          content,
+          seoTitle,
+          seoDescription,
+          coverImageId
+        }
+      });
+
+      res.json(updatedPost);
+
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/*
 PUBLISH POST
 Only ADMIN can publish
 */
