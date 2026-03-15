@@ -34,6 +34,8 @@ const codeBlock = z.object({
 });
 
 export const editorSchema = z.object({
+  title: z.string().min(1),
+
   blocks: z.array(
     z.union([
       paragraphBlock,
@@ -43,4 +45,10 @@ export const editorSchema = z.object({
       codeBlock,
     ])
   ),
+
+  excerpt: z.string().optional(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+  coverImageId: z.string().nullable().optional(),
+  categories: z.array(z.string()).optional(),
 });

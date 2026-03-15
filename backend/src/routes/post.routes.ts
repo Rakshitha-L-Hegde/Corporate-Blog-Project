@@ -15,22 +15,36 @@ Only return published posts for the public website
 */
 router.get("/", async (req, res, next) => {
   try {
+    const { slug } = req.query;
+
+    if (slug) {
+      const post = await prisma.post.findUnique({
+        where: { slug: slug as string },
+        include: {
+          author: true,
+          categories: true,
+        },
+      });
+
+      return res.json(post);
+    }
+
     const posts = await prisma.post.findMany({
       where: {
-        status: "PUBLISHED"
+        status: "PUBLISHED",
       },
       include: {
         author: true,
-        categories: true
-      }
+        categories: true,
+      },
     });
 
     res.json(posts);
+
   } catch (err) {
     next(err);
   }
 });
-
 /*
 CREATE POST
 Admin + Editor can create posts
@@ -104,6 +118,10 @@ router.post(
         }
       });
 
+      console.log(
+  `[DRAFT CREATED] user=${req.user?.userId} slug=${slug} status=${status}`
+);
+
       res.status(201).json(post);
 
     } catch (err) {
@@ -146,6 +164,10 @@ router.put(
         }
       });
 
+      console.log(
+  `[DRAFT UPDATED] user=${req.user?.userId} postId=${id}`
+);
+
       res.json(updatedPost);
 
     } catch (err) {
@@ -162,7 +184,7 @@ router.patch(
   "/:id/publish",
   authenticate,
   authorize("ADMIN"),
-  async (req, res, next) => {
+  async (req: AuthRequest, res, next) => {
     try {
       const { id } = req.params;
 
@@ -172,6 +194,10 @@ router.patch(
           status: "PUBLISHED"
         }
       });
+
+      console.log(
+        `[DRAFT PUBLISHED] user=${req.user?.userId} postId=${id}`
+      );
 
       res.json({
         message: "Post published successfully",
