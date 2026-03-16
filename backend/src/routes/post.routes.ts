@@ -4,10 +4,16 @@ import { validate } from "../middleware/validate";
 import { editorSchema } from "../schemas/editor.schema";
 import slugify from "slugify";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
+import { getPostBySlug } from "../controllers/post.controller";
 
 console.log("Post routes loaded");
 
 const router = Router();
+
+/*
+GET POST BY SLUG (PUBLIC)
+*/
+router.get("/slug/:slug", getPostBySlug);
 
 /*
 PUBLIC POSTS
@@ -15,23 +21,12 @@ Only return published posts for the public website
 */
 router.get("/", async (req, res, next) => {
   try {
-    const { slug } = req.query;
-
-    if (slug) {
-      const post = await prisma.post.findUnique({
-        where: { slug: slug as string },
-        include: {
-          author: true,
-          categories: true,
-        },
-      });
-
-      return res.json(post);
-    }
-
     const posts = await prisma.post.findMany({
       where: {
         status: "PUBLISHED",
+        publishedAt: {
+          not: null
+        }
       },
       include: {
         author: true,

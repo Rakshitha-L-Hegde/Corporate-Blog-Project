@@ -11,6 +11,8 @@ import bcrypt from "bcrypt";
 import authRoutes from "./routes/auth.routes";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import categoryRoutes from "./routes/category.routes";
+import authorRoutes from "./routes/author.routes";
 
 console.log("App imported postRoutes");
 const app = express();
@@ -28,7 +30,7 @@ app.use(limiter);
 app.use(cors({
   origin: ["http://localhost:3000"],
   credentials: true,
-  methods: ["GET", "POST", "PATCH", "DELETE"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
 }));
 
 app.use(express.json());
@@ -53,7 +55,8 @@ app.post("/test", validate(registerSchema), (req, res) => {
 app.use("/api/posts", postRoutes);
 
 app.use("/api/auth", authRoutes);
-
+app.use("/categories", categoryRoutes);
+app.use("/authors", authorRoutes);
 app.get("/create-user", async (req, res) => {
   try {
     // 1️⃣ Hash the password
