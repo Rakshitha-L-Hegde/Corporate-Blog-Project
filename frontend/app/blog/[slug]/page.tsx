@@ -4,7 +4,7 @@ import { generateTOC } from "@/lib/generateTOC";
 
 export const revalidate = 900;
 export async function generateStaticParams() {
-  const res = await fetch("http://localhost:5000/api/posts");
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/posts`);
 
   const posts = await res.json();
 
