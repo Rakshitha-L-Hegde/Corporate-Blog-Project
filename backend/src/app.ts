@@ -24,6 +24,19 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: "Too many requests from this IP, please try again later."
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    if (req.ip) return req.ip;
+
+    const forwarded = req.headers["x-forwarded-for"];
+
+    if (typeof forwarded === "string") {
+      return forwarded;
+    }
+
+    return "unknown";
+  }
 });
 
 app.use(limiter);
