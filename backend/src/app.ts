@@ -17,6 +17,7 @@ import authorRoutes from "./routes/author.routes";
 console.log("App imported postRoutes");
 const app = express();
 
+app.set("trust proxy", 1);
 app.use(helmet());
 
 const limiter = rateLimit({
