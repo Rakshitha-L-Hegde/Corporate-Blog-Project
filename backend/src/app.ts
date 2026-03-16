@@ -10,9 +10,9 @@ import postRoutes from "./routes/post.routes";
 import bcrypt from "bcrypt";
 import authRoutes from "./routes/auth.routes";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
 import categoryRoutes from "./routes/category.routes";
 import authorRoutes from "./routes/author.routes";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 console.log("App imported postRoutes");
 const app = express();
@@ -23,20 +23,9 @@ app.use(helmet());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    if (req.ip) return req.ip;
-
-    const forwarded = req.headers["x-forwarded-for"];
-
-    if (typeof forwarded === "string") {
-      return forwarded;
-    }
-
-    return "unknown";
-  }
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? "127.0.0.1")
 });
 
 app.use(limiter);
