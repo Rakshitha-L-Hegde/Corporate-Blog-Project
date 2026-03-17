@@ -1,5 +1,15 @@
 import { Block } from "./blockTypes";
 import React from "react";
+import Image from "next/image";
+
+function optimizeImage(url: string) {
+  if (!url.includes("cloudinary")) return url;
+
+  return url.replace(
+    "/upload/",
+    "/upload/f_auto,q_auto,w_1200/"
+  );
+}
 
 export function renderBlock(block: Block, index: number) {
   switch (block.type) {
@@ -9,7 +19,7 @@ export function renderBlock(block: Block, index: number) {
 
   return (
     <Tag key={index} className="font-bold mt-8 mb-4">
-      {block.text}
+      {block.content}
     </Tag>
   );
 }
@@ -17,7 +27,7 @@ export function renderBlock(block: Block, index: number) {
     case "paragraph":
       return (
         <p key={index} className="mb-4">
-          {block.text}
+          {block.content}
         </p>
       );
 
@@ -41,14 +51,26 @@ export function renderBlock(block: Block, index: number) {
       );
 
     case "image":
-      return (
-        <img
-          key={index}
-          src={block.url}
-          alt={block.alt || ""}
-          className="my-6 rounded-lg"
-        />
-      );
+  return (
+    <figure key={index} className="my-6">
+      <Image
+        src={optimizeImage(block.url)}
+        alt={block.alt_text || "Blog image"}
+        title={block.title || ""}
+        width={block.width || 1200}
+        height={block.height || 700}
+        loading="lazy"
+        sizes="(max-width: 768px) 100vw, 1200px"
+        className="rounded-lg"
+      />
+
+      {block.caption && (
+        <figcaption className="text-sm text-gray-500 mt-2 text-center">
+          {block.caption}
+        </figcaption>
+      )}
+    </figure>
+  );
 
     case "blockquote":
       return (
@@ -56,7 +78,7 @@ export function renderBlock(block: Block, index: number) {
           key={index}
           className="border-l-4 border-gray-400 pl-4 italic my-6"
         >
-          {block.text}
+          {block.content}
         </blockquote>
       );
 

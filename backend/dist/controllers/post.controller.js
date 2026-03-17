@@ -26,7 +26,12 @@ const getPostBySlug = async (req, res, next) => {
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
         }
-        res.json(post);
+        const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
+        const canonical = post.canonicalUrl || `${SITE_URL}/blog/${post.slug}`;
+        res.json({
+            ...post,
+            canonical
+        });
     }
     catch (error) {
         next(error);

@@ -5,6 +5,8 @@ import { editorSchema } from "../schemas/editor.schema";
 import slugify from "slugify";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { getPostBySlug } from "../controllers/post.controller";
+import { getSitemap } from "../controllers/sitemap.controller";
+import { publishPost } from "../controllers/post.controller";
 
 console.log("Post routes loaded");
 
@@ -14,6 +16,11 @@ const router = Router();
 GET POST BY SLUG (PUBLIC)
 */
 router.get("/slug/:slug", getPostBySlug);
+
+/*
+SITEMAP XML (PUBLIC)
+*/
+router.get("/sitemap.xml", getSitemap);
 
 /*
 PUBLIC POSTS
@@ -182,21 +189,84 @@ router.patch(
   async (req: AuthRequest, res, next) => {
     try {
       const { id } = req.params;
+      const { scheduledAt } = req.body;
 
-      const post = await prisma.post.update({
-        where: { id },
-        data: {
-          status: "PUBLISHED"
-        }
-      });
+      const post = await prisma.post.findUnique({
+  where: { id }
+});
 
-      console.log(
-        `[DRAFT PUBLISHED] user=${req.user?.userId} postId=${id}`
-      );
+if (!post) {
+  return res.status(404).json({ message: "Post not found" });
+}
+
+if (!post.title) {
+  return res.status(400).json({ message: "Title required" });
+}
+
+if (!post.slug) {
+  return res.status(400).json({ message: "Slug required" });
+}
+
+if (!post.coverImageId) {
+  return res.status(400).json({ message: "Banner required" });
+}
+
+if (!post.excerpt && !post.seoDescription) {
+  return res.status(400).json({
+    message: "Excerpt or meta required"
+  });
+}
+
+      // default → publish immediately
+      let status: "PUBLISHED" | "SCHEDULED" = "PUBLISHED";
+      let publishedAt: Date | null = new Date();
+      let scheduleDate: Date | null = null;
+
+      // scheduling logic
+      if (scheduledAt && new Date(scheduledAt) > new Date()) {
+        status = "SCHEDULED";
+        publishedAt = null;
+        scheduleDate = new Date(scheduledAt);
+      }
+
+      // 🔥 TRANSACTION (atomic)
+      const [updatedPost] = await prisma.$transaction([
+        prisma.post.update({
+          where: { id },
+          data: {
+            status,
+            publishedAt,
+            scheduledAt: scheduleDate
+          }
+        }),
+
+        // 🔥 AUDIT LOG
+        prisma.postPublishLog.create({
+          data: {
+            postId: id,
+            action: status,
+            performedBy: req.user!.userId
+          }
+        })
+      ]);
+
+      // 🔥 ISR TRIGGER (only when published immediately)
+      if (status === "PUBLISHED") {
+        await fetch(`${process.env.FRONTEND_URL}/api/revalidate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.REVALIDATE_SECRET}`
+          },
+          body: JSON.stringify({
+            path: `/blog/${updatedPost.slug}`
+          })
+        });
+      }
 
       res.json({
-        message: "Post published successfully",
-        post
+        message: `Post ${status} successfully`,
+        post: updatedPost
       });
 
     } catch (err) {

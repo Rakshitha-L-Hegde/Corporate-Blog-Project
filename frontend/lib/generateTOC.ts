@@ -8,7 +8,7 @@ export function generateTOC(blocks: Block[]) {
         (block.level === 2 || block.level === 3)
     )
     .map((block) => ({
-      text: block.text,
+      text: block.content,
       level: block.level
     }));
 }

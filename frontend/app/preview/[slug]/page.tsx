@@ -20,7 +20,7 @@ export default async function PreviewPage({
 
   const post = await getPost(slug);
 
-  if (!post) return notFound();
+  if (!post || post.status !== "draft") return notFound();
 
   return (
     <div className="max-w-3xl mx-auto p-8">

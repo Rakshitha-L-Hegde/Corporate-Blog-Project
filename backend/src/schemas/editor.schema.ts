@@ -17,7 +17,13 @@ const imageBlock = z.object({
   id: z.string(),
   type: z.literal("image"),
   url: z.string().url(),
+
+  alt_text: z.string().min(1),
+  title: z.string().optional(),
   caption: z.string().optional(),
+
+  width: z.number().optional(),
+  height: z.number().optional(),
 });
 
 const quoteBlock = z.object({
@@ -47,8 +53,9 @@ export const editorSchema = z.object({
   ),
 
   excerpt: z.string().optional(),
-  seoTitle: z.string().optional(),
-  seoDescription: z.string().optional(),
+  seoTitle: z.string().max(60).optional(),
+  seoDescription: z.string().max(160).optional(),
+  canonicalUrl: z.string().url().optional(),
   coverImageId: z.string().nullable().optional(),
   categories: z.array(z.string()).optional(),
 });

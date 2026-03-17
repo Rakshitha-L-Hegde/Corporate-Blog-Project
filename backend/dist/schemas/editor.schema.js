@@ -17,7 +17,11 @@ const imageBlock = zod_1.z.object({
     id: zod_1.z.string(),
     type: zod_1.z.literal("image"),
     url: zod_1.z.string().url(),
+    alt_text: zod_1.z.string().min(1),
+    title: zod_1.z.string().optional(),
     caption: zod_1.z.string().optional(),
+    width: zod_1.z.number().optional(),
+    height: zod_1.z.number().optional(),
 });
 const quoteBlock = zod_1.z.object({
     id: zod_1.z.string(),
@@ -40,8 +44,9 @@ exports.editorSchema = zod_1.z.object({
         codeBlock,
     ])),
     excerpt: zod_1.z.string().optional(),
-    seoTitle: zod_1.z.string().optional(),
-    seoDescription: zod_1.z.string().optional(),
+    seoTitle: zod_1.z.string().max(60).optional(),
+    seoDescription: zod_1.z.string().max(160).optional(),
+    canonicalUrl: zod_1.z.string().url().optional(),
     coverImageId: zod_1.z.string().nullable().optional(),
     categories: zod_1.z.array(zod_1.z.string()).optional(),
 });

@@ -10,12 +10,17 @@ const editor_schema_1 = require("../schemas/editor.schema");
 const slugify_1 = __importDefault(require("slugify"));
 const auth_1 = require("../middleware/auth");
 const post_controller_1 = require("../controllers/post.controller");
+const sitemap_controller_1 = require("../controllers/sitemap.controller");
 console.log("Post routes loaded");
 const router = (0, express_1.Router)();
 /*
 GET POST BY SLUG (PUBLIC)
 */
 router.get("/slug/:slug", post_controller_1.getPostBySlug);
+/*
+SITEMAP XML (PUBLIC)
+*/
+router.get("/sitemap.xml", sitemap_controller_1.getSitemap);
 /*
 PUBLIC POSTS
 Only return published posts for the public website

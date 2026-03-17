@@ -1,12 +1,12 @@
 export type HeadingBlock = {
   type: "heading";
   level: 1 | 2 | 3 | 4 | 5 | 6;
-  text: string;
+  content: string;
 };
 
 export type ParagraphBlock = {
   type: "paragraph";
-  text: string;
+  content: string;
 };
 
 export type ListBlock = {
@@ -18,12 +18,18 @@ export type ListBlock = {
 export type ImageBlock = {
   type: "image";
   url: string;
-  alt?: string;
+
+  alt_text: string;     // required
+  title?: string;
+  caption?: string;
+
+  width?: number;
+  height?: number;
 };
 
 export type QuoteBlock = {
   type: "blockquote";
-  text: string;
+  content: string;
 };
 
 export type TableBlock = {

@@ -34,7 +34,9 @@ model Post {
   readingTime   Int?
   seoTitle      String?
   seoDescription String?
+  canonicalUrl   String?
   publishedAt   DateTime?
+  scheduledAt   DateTime? 
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -89,6 +91,14 @@ user         User @relation(fields: [uploadedById], references: [id])
   posts      Post[]
 }
 
+model PostPublishLog {
+  id           Int      @id @default(autoincrement())
+  postId       String
+  action       String
+  performedBy  String
+  createdAt    DateTime @default(now())
+}
+
 enum Role {
   ADMIN
   EDITOR
@@ -98,4 +108,5 @@ enum Role {
 enum PostStatus {
   DRAFT
   PUBLISHED
+  SCHEDULED 
 }
