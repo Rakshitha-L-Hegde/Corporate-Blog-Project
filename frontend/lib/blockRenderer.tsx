@@ -7,7 +7,7 @@ function optimizeImage(url: string) {
 
   return url.replace(
     "/upload/",
-    "/upload/f_auto,q_auto,w_1200/"
+    "/upload/f_auto,q_auto,w_800/"
   );
 }
 
@@ -53,17 +53,20 @@ export function renderBlock(block: Block, index: number) {
     case "image":
   return (
     <figure key={index} className="my-6">
+      <div className="relative w-full">
       <Image
         src={optimizeImage(block.url)}
         alt={block.alt_text || "Blog image"}
         title={block.title || ""}
         width={block.width || 1200}
         height={block.height || 700}
-        loading="lazy"
+        quality={70}
+        priority={index === 0}
+        loading={index === 0 ? "eager" : "lazy"}
         sizes="(max-width: 768px) 100vw, 1200px"
         className="rounded-lg"
       />
-
+      </div>
       {block.caption && (
         <figcaption className="text-sm text-gray-500 mt-2 text-center">
           {block.caption}

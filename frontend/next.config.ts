@@ -24,10 +24,14 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    qualities: [70, 75], // 👈 ADD THIS
+  },
+
   async headers() {
     return [
       {
-        source: "/(.*)", // apply to all routes
+        source: "/(.*)",
         headers: securityHeaders,
       },
     ];

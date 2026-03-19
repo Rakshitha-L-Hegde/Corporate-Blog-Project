@@ -35,6 +35,8 @@ export const getPostBySlug = async (
       return res.status(404).json({ message: "Post not found" });
     }
 
+    const relatedPosts = await getRelatedPosts(post.id);
+
     const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
 
     const canonical =
@@ -42,7 +44,8 @@ export const getPostBySlug = async (
 
     res.json({
       ...post,
-      canonical
+      canonical,
+      relatedPosts,
     });
 
   } catch (error) {
@@ -114,4 +117,106 @@ export const publishPost = async (req: Request, res: Response) => {
     console.error(error);
     res.status(500).json({ error: "Publish failed" });
   }
+};
+
+export const getPosts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const start = Date.now();
+
+    const posts = await prisma.post.findMany({
+      where: {
+        ...publishedFilter
+      },
+      skip,
+      take: limit,
+      include: {
+        author: true,
+        categories: {
+          include: {
+            category: true
+          }
+        }
+      }
+    });
+
+    logQueryPerformance("getPosts", start);
+
+    res.json({
+      page,
+      limit,
+      data: posts,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const searchPosts = async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query;
+
+    // If user types nothing → return empty
+    if (!q || typeof q !== "string") {
+      return res.json([]);
+    }
+
+    const results = await prisma.$queryRawUnsafe(
+      `
+      SELECT id, title, slug
+      FROM "Post"
+      WHERE search_vector @@ plainto_tsquery('english', $1)
+      AND status = 'PUBLISHED'
+      ORDER BY ts_rank(search_vector, plainto_tsquery('english', $1)) DESC
+      LIMIT 10;
+      `,
+      q
+    );
+
+    res.json(results);
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ message: "Search failed" });
+  }
+};
+
+export const getRelatedPosts = async (postId: string) => {
+  // Step 1: Get current post categories
+  const currentPost = await prisma.post.findUnique({
+    where: { id: postId },
+    include: {
+      categories: true,
+    },
+  });
+
+  if (!currentPost) return [];
+
+  const categoryIds = currentPost.categories.map(
+    (c) => c.categoryId
+  );
+
+  // Step 2: Find similar posts
+  const related = await prisma.post.findMany({
+    where: {
+      id: { not: postId }, // not same post
+      status: "PUBLISHED",
+      categories: {
+        some: {
+          categoryId: { in: categoryIds },
+        },
+      },
+    },
+    take: 3,
+  });
+
+  return related;
 };

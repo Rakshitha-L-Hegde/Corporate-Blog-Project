@@ -4,9 +4,13 @@ import { validate } from "../middleware/validate";
 import { editorSchema } from "../schemas/editor.schema";
 import slugify from "slugify";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
-import { getPostBySlug } from "../controllers/post.controller";
+import { getPostBySlug, searchPosts } from "../controllers/post.controller";
 import { getSitemap } from "../controllers/sitemap.controller";
 import { publishPost } from "../controllers/post.controller";
+import { logQueryPerformance } from "../lib/queryLogger";
+
+let cachedPosts: any = null;
+let lastFetch = 0;
 
 console.log("Post routes loaded");
 
@@ -16,6 +20,9 @@ const router = Router();
 GET POST BY SLUG (PUBLIC)
 */
 router.get("/slug/:slug", getPostBySlug);
+
+
+router.get("/search", searchPosts);
 
 /*
 SITEMAP XML (PUBLIC)
@@ -28,20 +35,43 @@ Only return published posts for the public website
 */
 router.get("/", async (req, res, next) => {
   try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    // ✅ CACHE CHECK (5 seconds)
+    if (Date.now() - lastFetch < 5000 && cachedPosts) {
+      return res.json(cachedPosts);
+    }
+
+    const skip = (page - 1) * limit;
+
     const posts = await prisma.post.findMany({
       where: {
         status: "PUBLISHED",
-        publishedAt: {
-          not: null
-        }
+        publishedAt: { not: null }
       },
-      include: {
-        author: true,
-        categories: true,
-      },
+      skip,
+      take: Math.min(limit, 20),
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        coverImageId: true,
+      }
     });
 
-    res.json(posts);
+    const result = {
+      page,
+      limit,
+      data: posts,
+    };
+
+    // ✅ SAVE TO CACHE
+    cachedPosts = result;
+    lastFetch = Date.now();
+
+    res.json(result);
 
   } catch (err) {
     next(err);
@@ -188,6 +218,7 @@ router.patch(
   authorize("ADMIN"),
   async (req: AuthRequest, res, next) => {
     try {
+      const start = Date.now();
       const { id } = req.params;
       const { scheduledAt } = req.body;
 
@@ -207,9 +238,9 @@ if (!post.slug) {
   return res.status(400).json({ message: "Slug required" });
 }
 
-if (!post.coverImageId) {
-  return res.status(400).json({ message: "Banner required" });
-}
+//if (!post.coverImageId) {
+//  return res.status(400).json({ message: "Banner required" });
+//}
 
 if (!post.excerpt && !post.seoDescription) {
   return res.status(400).json({
@@ -263,6 +294,9 @@ if (!post.excerpt && !post.seoDescription) {
           })
         });
       }
+
+      const end = Date.now();
+console.log(`Publish latency: ${end - start} ms`);
 
       res.json({
         message: `Post ${status} successfully`,

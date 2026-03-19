@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import BlockRenderer from "@/components/BlockRenderer";
 import { generateTOC } from "@/lib/generateTOC";
+import Image from "next/image";
 
 export const revalidate = 900;
 export async function generateStaticParams() {
@@ -82,6 +83,15 @@ export async function generateMetadata({
   };
 }
 
+
+function optimizeImage(url: string) {
+  if (!url.includes("cloudinary")) return url;
+
+  return url.replace(
+    "/upload/",
+    "/upload/f_auto,q_auto,w_800/"
+  );
+}
 export default async function BlogPost({
   params,
 }: {
@@ -134,7 +144,7 @@ const breadcrumbData = {
   const toc = generateTOC(post.content);
 
   return (
-    <div className="max-w-3xl mx-auto py-12">
+    <div className="max-w-3xl mx-auto py-12 min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -150,6 +160,17 @@ const breadcrumbData = {
   />
       <h1 className="text-4xl font-bold mb-6">{post.title}</h1>
 
+        {post.coverImage && (
+            <Image
+              src={optimizeImage(post.coverImage)}
+              alt={post.title}
+              width={1200}
+              height={600}
+              quality={70}
+              priority
+              className="rounded-lg mb-6"
+            />
+          )}
       {/* Table of Contents */}
       {toc.length > 0 && (
         <div className="mb-10">
@@ -170,6 +191,25 @@ const breadcrumbData = {
 
       {/* Render Blocks */}
       <BlockRenderer blocks={post.content} />
+
+      {/* Related Posts */}
+{post.relatedPosts && post.relatedPosts.length > 0 && (
+  <div className="mt-12">
+    <h2 className="text-2xl font-bold mb-4">Related Posts</h2>
+
+    <div className="grid gap-4">
+      {post.relatedPosts.map((p: any) => (
+        <a
+          key={p.id}
+          href={`/blog/${p.slug}`}
+          className="border p-4 rounded hover:shadow transition"
+        >
+          {p.title}
+        </a>
+      ))}
+    </div>
+  </div>
+)}
     </div>
   );
 }

@@ -11,6 +11,8 @@ const slugify_1 = __importDefault(require("slugify"));
 const auth_1 = require("../middleware/auth");
 const post_controller_1 = require("../controllers/post.controller");
 const sitemap_controller_1 = require("../controllers/sitemap.controller");
+let cachedPosts = null;
+let lastFetch = 0;
 console.log("Post routes loaded");
 const router = (0, express_1.Router)();
 /*
@@ -27,19 +29,37 @@ Only return published posts for the public website
 */
 router.get("/", async (req, res, next) => {
     try {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        // ✅ CACHE CHECK (5 seconds)
+        if (Date.now() - lastFetch < 5000 && cachedPosts) {
+            return res.json(cachedPosts);
+        }
+        const skip = (page - 1) * limit;
         const posts = await prisma_1.prisma.post.findMany({
             where: {
                 status: "PUBLISHED",
-                publishedAt: {
-                    not: null
-                }
+                publishedAt: { not: null }
             },
-            include: {
-                author: true,
-                categories: true,
-            },
+            skip,
+            take: Math.min(limit, 20),
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                excerpt: true,
+                coverImageId: true,
+            }
         });
-        res.json(posts);
+        const result = {
+            page,
+            limit,
+            data: posts,
+        };
+        // ✅ SAVE TO CACHE
+        cachedPosts = result;
+        lastFetch = Date.now();
+        res.json(result);
     }
     catch (err) {
         next(err);
@@ -134,17 +154,76 @@ Only ADMIN can publish
 */
 router.patch("/:id/publish", auth_1.authenticate, (0, auth_1.authorize)("ADMIN"), async (req, res, next) => {
     try {
+        const start = Date.now();
         const { id } = req.params;
-        const post = await prisma_1.prisma.post.update({
-            where: { id },
-            data: {
-                status: "PUBLISHED"
-            }
+        const { scheduledAt } = req.body;
+        const post = await prisma_1.prisma.post.findUnique({
+            where: { id }
         });
-        console.log(`[DRAFT PUBLISHED] user=${req.user?.userId} postId=${id}`);
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+        if (!post.title) {
+            return res.status(400).json({ message: "Title required" });
+        }
+        if (!post.slug) {
+            return res.status(400).json({ message: "Slug required" });
+        }
+        //if (!post.coverImageId) {
+        //  return res.status(400).json({ message: "Banner required" });
+        //}
+        if (!post.excerpt && !post.seoDescription) {
+            return res.status(400).json({
+                message: "Excerpt or meta required"
+            });
+        }
+        // default → publish immediately
+        let status = "PUBLISHED";
+        let publishedAt = new Date();
+        let scheduleDate = null;
+        // scheduling logic
+        if (scheduledAt && new Date(scheduledAt) > new Date()) {
+            status = "SCHEDULED";
+            publishedAt = null;
+            scheduleDate = new Date(scheduledAt);
+        }
+        // 🔥 TRANSACTION (atomic)
+        const [updatedPost] = await prisma_1.prisma.$transaction([
+            prisma_1.prisma.post.update({
+                where: { id },
+                data: {
+                    status,
+                    publishedAt,
+                    scheduledAt: scheduleDate
+                }
+            }),
+            // 🔥 AUDIT LOG
+            prisma_1.prisma.postPublishLog.create({
+                data: {
+                    postId: id,
+                    action: status,
+                    performedBy: req.user.userId
+                }
+            })
+        ]);
+        // 🔥 ISR TRIGGER (only when published immediately)
+        if (status === "PUBLISHED") {
+            await fetch(`${process.env.FRONTEND_URL}/api/revalidate`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${process.env.REVALIDATE_SECRET}`
+                },
+                body: JSON.stringify({
+                    path: `/blog/${updatedPost.slug}`
+                })
+            });
+        }
+        const end = Date.now();
+        console.log(`Publish latency: ${end - start} ms`);
         res.json({
-            message: "Post published successfully",
-            post
+            message: `Post ${status} successfully`,
+            post: updatedPost
         });
     }
     catch (err) {
